@@ -1,4 +1,7 @@
 <?php
+
+use Dompdf\Dompdf;
+
 defined('BASEPATH') or exit('No Direct Script Access Allowed');
 date_default_timezone_set('Asia/Jakarta');
 
@@ -92,7 +95,7 @@ class Booking extends CI_Controller
         if ($tempuser == 3) {
             $this->session->set_flashdata('pesan', '<div class="alert alert-danger alert-message" 
             role="alert">Booking Buku Tidak Boleh Lebih dari 3</div>');
-            
+
             redirect(base_url() . 'home');
         }
 
@@ -107,7 +110,7 @@ class Booking extends CI_Controller
         redirect(base_url() . 'home');
     }
 
-    public function hapusbooking() 
+    public function hapusbooking()
     {
         $id_buku = $this->uri->segment(3);
         $id_user = $this->session->userdata('id_user');
@@ -142,41 +145,40 @@ class Booking extends CI_Controller
         redirect(base_url() . 'booking/info');
     }
 
-    public function info()
-    {
-        $where = $this->session->userdata('id_user');
-        $data['user'] = $this->session->userdata('nama');
-        $data['judul'] = "Selesai Booking";
-        $data['useraktif'] = $this->ModelUser->cekData(['id' => $this->session->userdata('id_user')])->result();
-        $data['items'] = $this->db->query("select*from booking bo, booking_detail d, buku bu where d.
-        id_booking=bo.id_booking and d.id_buku=bu.id and bo.id_user='$where'")->result_array();
-
-        $this->load->view('templates/templates-user/header', $data);
-        $this->load->view('booking/info-booking', $data);
-        $this->load->view('templates/templates-user/modal');
-        $this->load->view('templates/templates-user/footer');
-    }
-
     public function exportToPdf()
     {
         $id_user = $this->session->userdata('id_user');
         $data['user'] = $this->session->userdata('nama');
         $data['judul'] = "Cetak Bukti Booking";
         $data['useraktif'] = $this->ModelUser->cekData(['id' => $this->session->userdata('id_user')])->result();
-        $data['items'] = $this->db->query("select*from booking bo, booking_detail d, buku bu where d.id_booking=bo.id_booking 
-        and d.id_buku=bu.id and bo.id_user='$id_user'")->result_array();
+        $data['items'] = $this->db->query("select*from booking bo, booking_detail d, buku bu where d.id_booking=bo.id_booking and d.id_buku=bu.id and bo.id_user='$id_user'")->result_array();
 
-        $this->load->library('dompdf_gen');
+        $root = $_SERVER["DOCUMENT_ROOT"];
+        include $root . "/pustaka-booking/application/third_party/dompdf/autoload.inc.php";
+        $dompdf = new Dompdf();
+
         $this->load->view('booking/bukti-pdf', $data);
+
         $paper_size = 'A4'; // ukuran kertas
         $orientation = 'landscape'; //tipe format kertas potrait atau landscape
         $html = $this->output->get_output();
 
-        $this->dompdf->set_paper($paper_size, $orientation);
-        //Convert to PDF
-        $this->dompdf->load_html($html);
-        $this->dompdf->render();
-        $this->dompdf->stream("bukti-booking-$id_user.pdf", array('Attachment' => 0));
+        $dompdf->set_paper($paper_size, $orientation); //Convert to PDF
+        $dompdf->load_html($html);
+        $dompdf->render();
+        $dompdf->stream("bukti-booking-$id_user.pdf", array('Attachment' => 0));
         // nama file pdf yang di hasilkan
+    }
+    public function info()
+    {
+        $where = $this->session->userdata('id_user');
+        $data['user'] = $this->session->userdata('nama');
+        $data['judul'] = "Selesai Booking";
+        $data['useraktif'] = $this->ModelUser->cekData(['id' => $this->session->userdata('id_user')])->result();
+        $data['items'] = $this->db->query("select*from booking bo, booking_detail d, buku bu where d.id_booking=bo.id_booking and d.id_buku=bu.id and bo.id_user='$where'")->result_array();
+        $this->load->view('templates/templates-user/header', $data);
+        $this->load->view('booking/info-booking', $data);
+        $this->load->view('templates/templates-user/modal');
+        $this->load->view('templates/templates-user/footer');
     }
 }
